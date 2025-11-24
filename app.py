@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 import google.generativeai as genai
 import os
@@ -10,48 +10,35 @@ load_dotenv()
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 print("Loaded API Key:", GEMINI_API_KEY)
-
 genai.configure(api_key=GEMINI_API_KEY)
 
+# Choose model
 model = genai.GenerativeModel("models/gemini-2.5-flash")
 
-# Flask app
+# Create Flask app
 app = Flask(__name__)
 
-# ======================================================
-# ✅ Enable CORS for your Vercel frontend
-# ======================================================
+# Enable CORS for your Vercel frontend
 CORS(app, resources={
-    r"/*": {
+    r"/chat": {
         "origins": ["https://strat-bot-ai-chatbot.vercel.app"],
-        "methods": ["GET", "POST", "OPTIONS"],
+        "methods": ["POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
 })
 
-
-# ======================================================
-# ROUTES
-# ======================================================
-
-@app.route("/")
-def index():
-    return "Backend Running Successfully!"
-
-
-# ======================================================
-# CHAT ROUTE WITH OPTIONS SUPPORT
-# ======================================================
 @app.route("/chat", methods=["POST", "OPTIONS"])
 def chat():
-    # ---- preflight request ----
+    # Handle preflight request
     if request.method == "OPTIONS":
         return "", 200
 
-    # ---- POST request ----
-    data = request.get_json()
-    user_input = data.get("message")
+    # Handle POST request
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"error": "Invalid JSON"}), 400
 
+    user_input = data.get("message")
     print("User input:", user_input)
 
     if not user_input:
@@ -61,34 +48,28 @@ def chat():
         prompt = f"""
 You are StratBot — a Game Strategy Advisor bot.
 
-Rules:
-1. If user greets: reply casually & politely.
-2. If user asks 'who made you', answer:
-   "I was built using Google's AI models, but optimized and shaped into a strategist bot by Ankit Shankhdhar."
-3. If topic is gaming → provide strategies.
-4. If topic is physical sports → provide performance advice.
-5. If topic is unrelated → reply:
+Your behavior must strictly follow these rules:
+
+1. If the user says greetings or polite conversation like "Hello", "Hi", "How are you", "Thank you", "Bye", etc., then reply casually and politely like a friendly bot.  
+2. If the user asks who made you or who created you, reply:  
+   "I was built using Google's AI models, but optimized and shaped into a strategist bot by Sanchit Sharma."  
+3. If the question is related to any type of gaming (board games, video games, offline, online, mobile, etc.), then give proper game strategies, tips, tricks, or support.  
+4. If the question is related to physical sports performance or player improvement (e.g., "How can Ronaldo play better in the next game?"), then provide strategies or advice for improving performance.  
+5. If the question is NOT related to gaming, physical sports, and NOT a greeting, then reply:  
    "I'm all about gaming strategies! For other topics, a general assistant might help you better."
 
 User message:
 {user_input}
 """
 
-        # Generate response
         response = model.generate_content(prompt)
-
-        # Clean markdown symbols
         clean_text = response.text.replace("**", "")
-
         return jsonify({"response": clean_text})
 
     except Exception as e:
         print("Gemini Error:", e)
         return jsonify({"error": str(e)}), 500
 
-
-# ======================================================
-# RUN SERVER
-# ======================================================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000, debug=False)
+    # Use 0.0.0.0 and port 10000 for Render compatibility
+    app.run(host="0.0.0.0", port=10000)
