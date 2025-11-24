@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StratBot</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .branding {
+      margin-top: 2rem;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .branding h1 {
+      font-size: 4rem;
+      background: linear-gradient(90deg, #3b82f6, #06b6d4);
+      color: transparent;
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+    }
+
+    .branding h2 {
+      font-size: 1rem;
+      color: #94a3b8;
+      margin-top: 0.3rem;
+    }
+
+    .intro-message {
+      margin-top: 1.2rem;
+      font-size: 1rem;
+      color: #cbd5e1;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .chat-container {
+      width: 90%;
+      max-width: 800px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .messages {
+      flex-grow: 1;
+      overflow-y: auto;
+      max-height: 400px;
+      margin-bottom: 1rem;
+    }
+
+    .message {
+      margin: 0.5rem 0;
+      padding: 10px 15px;
+      border-radius: 10px;
+    }
+
+    .user {
+      background-color: #2563eb33;
+      align-self: flex-end;
+    }
+
+    .bot {
+      background-color: #1e293b;
+      align-self: flex-start;
+    }
+
+    .thinking {
+      font-style: italic;
+      color: #64748b;
+      margin-left: 10px;
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+
+      100% {
+        opacity: 1;
+      }
+    }
+
+    input[type="text"] {
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      width: calc(100% - 90px);
+      font-size: 1rem;
+      background-color: #1e293b;
+      color: #fff;
+    }
+
+    button {
+      padding: 12px 18px;
+      margin-left: 10px;
+      background: #3b82f6;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #2563eb;
+    }
+
+    footer {
+      margin-top: auto;
+      padding: 1rem;
+      text-align: center;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="branding">
+    <h1>StratBot</h1>
+    <h2>Strategize Your Way to Victory</h2>
+  </div>
+
+  <div class="intro-message">Need a gaming strategy? I’ve got your back.</div>
+
+  <div class="chat-container">
+    <div class="messages" id="chat"></div>
+    <div style="display: flex;">
+      <input type="text" id="message" placeholder="Message StratBot" />
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+  <footer>© 2025 StratBot</footer>
+
+  <script>
+    const input = document.getElementById("message");
+    const chat = document.getElementById("chat");
+    let autoScroll = true;
+  
+    input.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") {
+        sendMessage();
+      }
+    });
+  
+    chat.addEventListener('scroll', () => {
+      const atBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 10;
+      autoScroll = atBottom;
+    });
+  
+    function sendMessage() {
+      const message = input.value.trim();
+      if (!message) return;
+  
+      appendMessage("user", message);
+      input.value = "";
+  
+      const thinking = document.createElement("div");
+      thinking.className = "message bot thinking";
+      thinking.innerText = "Thinking...";
+      chat.appendChild(thinking);
+      scrollChat();
+  
+      fetch("/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          chat.removeChild(thinking);
+          if (data.response) {
+            typeMessage("bot", data.response);
+          } else {
+            appendMessage("bot", "⚠️ Error: " + data.error);
+          }
+        })
+        .catch((err) => {
+          chat.removeChild(thinking);
+          appendMessage("bot", "⚠️ Error: Unable to reach server.");
+        });
+    }
+  
+    function appendMessage(sender, text) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = `message ${sender}`;
+      msgDiv.innerText = text;
+      chat.appendChild(msgDiv);
+      scrollChat();
+    }
+  
+    function scrollChat() {
+      if (autoScroll) {
+        chat.scrollTop = chat.scrollHeight;
+      }
+    }
+  
+    function typeMessage(sender, text) {
+      const msgDiv = document.createElement("div");
+      msgDiv.className = `message ${sender}`;
+      chat.appendChild(msgDiv);
+  
+      let i = 0;
+      function typeNextChar() {
+        if (i < text.length) {
+          msgDiv.innerHTML += text[i] === "\n" ? "<br>" : text[i];
+          i++;
+          scrollChat();
+          setTimeout(typeNextChar, 12);
+        }
+      }
+      typeNextChar();
+    }
+  </script>
+  
+</body>
+
+</html>
+
