@@ -64,7 +64,7 @@ You are StratBot — a Game Strategy Advisor bot.
 Rules:
 1. If user greets: reply casually & politely.
 2. If user asks 'who made you', answer:
-   "I was built using Google's AI models, but optimized and shaped into a strategist bot by Sanchit Sharma."
+   "I was built using Google's AI models, but optimized and shaped into a strategist bot by Ankit Shankhdhar."
 3. If topic is gaming → provide strategies.
 4. If topic is physical sports → provide performance advice.
 5. If topic is unrelated → reply:
@@ -78,4 +78,17 @@ User message:
         response = model.generate_content(prompt)
 
         # Clean markdown symbols
-        clean_text = response.text.replace("**",**_
+        clean_text = response.text.replace("**", "")
+
+        return jsonify({"response": clean_text})
+
+    except Exception as e:
+        print("Gemini Error:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+# ======================================================
+# RUN SERVER
+# ======================================================
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000, debug=False)
